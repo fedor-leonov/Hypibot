@@ -1,13 +1,11 @@
 import discord
+from discord.ext import commands
 import os
 
 #get the API key
 from dotenv import load_dotenv
 load_dotenv()
 
-#import commands and events
-import commands
-import events
 
 intents = discord.Intents.default()
 intents.members = True
