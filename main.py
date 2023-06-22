@@ -30,9 +30,6 @@ async def on_reaction_add(reaction, user):
 @bot.event
 async def on_guild_channel_create(channel):
     print(f'{channel} has been created in {channel.category}')
-async def on_error(event, *args, **kwargs):
-    message = args[0] 
-    await bot.send(message.channel, "oopsy! FedorBot had a fucky wucky because you typed in a wrong command or used a command incorrectly! try again!")
 
 @bot.command()
 async def foo(ctx, *, arg):
