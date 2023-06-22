@@ -35,7 +35,7 @@ conn = psycopg2.connect(f"dbname={dbName} user={dbUser} password={dbPass}")
 cur = conn.cursor() # create cursor
 
 def ownerCheck(ctx):
-    if ctx.author.id == ownerID:
+    if ctx.author.id == f"{ownerID}":
         return True
     else:
         return False
@@ -51,10 +51,6 @@ async def table(ctx, *args):
         await ctx.send(error)
     else:
         await ctx.send(args)
-
-@bot.command()
-async def mystery(ctx):
-    print(await bot.fetch_channel(668178989583695886))
 
 @bot.command()
 async def createChannel(ctx, category, channel):
