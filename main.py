@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import psycopg2
 import os
+import asyncio
 from dotenv import load_dotenv
 import logging
 
@@ -35,22 +36,31 @@ conn = psycopg2.connect(f"dbname={dbName} user={dbUser} password={dbPass}")
 cur = conn.cursor() # create cursor
 
 def ownerCheck(ctx):
-    if ctx.author.id == f"{ownerID}":
+    if ctx.author.id == int(ownerID):
         return True
     else:
         return False
     
 @bot.event
 async def on_ready():
-    print(f'We have logged in as {bot.user}')
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game('with your mom'))
+    print(f'Logged in as {bot.user}')
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game('with Postgres Databases'))
+
+# @bot.command()
+# async def createTable(ctx, *args):
+#     if (len(args)/2).is_integer() == True: #check if the length of arguments is a multiple of two
+#         await ctx.send(error)
+#     else:
+#         cur.execute(f"CREATE TABLE {args[0]} (args)")
+#         await ctx.send("created table")
 
 @bot.command()
-async def table(ctx, *args):
-    if (len(args)/2).is_integer() != True: #check if the length of arguments is a multiple of two
-        await ctx.send(error)
+async def createRole(ctx, roleName, perm):
+    if ownerCheck(ctx):
+        author = ctx.message.author
+        await author.add_roles(await ctx.guild.create_role(name=f"{roleName}", permissions=discord.Permissions(permissions=int(perm))))
     else:
-        await ctx.send(args)
+        await ctx.send(error)
 
 @bot.command()
 async def createChannel(ctx, category, channel):
