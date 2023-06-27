@@ -8,7 +8,7 @@ import logging
 
 load_dotenv() #get .env file
 #initialize all .env variables
-ownerID = os.getenv('OWNERID')
+botOwnerID = os.getenv('OWNERID')
 dbName = os.getenv('DBNAME')
 dbUser = os.getenv('DBUSER')
 dbPass = os.getenv('DBPASSWORD')
@@ -36,10 +36,7 @@ conn = psycopg2.connect(f"dbname={dbName} user={dbUser} password={dbPass}")
 cur = conn.cursor() # create cursor
 
 def ownerCheck(ctx):
-    if ctx.author.id == int(ownerID):
-        return True
-    else:
-        return False
+    return ctx.author.id == int(botOwnerID)
     
 @bot.event
 async def on_ready():
