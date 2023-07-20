@@ -7,13 +7,17 @@ import requests
 import asyncio
 import logging
 import os
+import tracemalloc
+
+tracemalloc.start()
+
 
 
 commandPrefix = '$'
 load_dotenv() # load dotenv
 discordBotkey = os.getenv('BOTKEY')
 hypixelKey = os.getenv('HYPIXELKEY')
-botDescription = 'Bday Gift for Dad'
+botDescription = 'Bot for interacting with Hypixel API'
 error = "Oops! Error occured!"
 logFile = 'bot.log'
 
@@ -31,7 +35,7 @@ bot = commands.Bot(command_prefix=f'{commandPrefix}', description=f'{botDescript
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user}')
-    await bot.change_presence(status=discord.Status.online, activity=discord.Game('with Postgres Databases'))
+    await bot.change_presence(status=discord.Status.online, activity=discord.Game('Hypixel'))
 
 @bot.command()
 async def lastOnline(ctx, username):
@@ -71,34 +75,42 @@ async def isOnline(ctx, username):
         if playerData["session"]["online"]:
             await ctx.send(f"{username} is currently online!")
         else:
-                await ctx.send(f"{username} is currently not online!")
+            await ctx.send(f"{username} is currently not online!")         
     else:
         await ctx.send(error + " Have you searched this name recently?")
 
-@tasks.loop(seconds=10)
 async def watchUser(ctx, username):
-    playerID = requests.get(
-        url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
-    ).json()["id"]
-    playerData = requests.get(
-        url = "https://api.hypixel.net/status",
-        params = {
-            "key": f"{hypixelKey}",
-            "uuid": f"{playerID}"
-        }
-    ).json()
-    if playerData["success"]:
-        if playerData["session"]["online"]:
-            await ctx.send(f"{username} is on!")
-        else:
-            await ctx.send(f"{username} is not on!")
-    else:
-        await ctx.send(error + " Have you searched this name recently?")
+    switch_state = None
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        playerID = requests.get(
+            url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
+        ).json()["id"]
+        playerData = requests.get(
+            url = "https://api.hypixel.net/status",
+            params = {
+                "key": f"{hypixelKey}",
+                "uuid": f"{playerID}"
+            }
+        ).json()
+        if playerData["success"]:
+            if playerData["session"]["online"]:
+                if switch_state != 1:
+                    await ctx.send(f"{username} is currently online!")
+                    switch_state = 1
+            elif playerData["session"]["online"] == False:
+                if switch_state != 0:
+                    await ctx.send(f"{username} is currently not online!")
+                    switch_state = 0
+            else:
+                await ctx.send(error)
+    
+        await asyncio.sleep(10)
 
 
 @bot.command()
 async def createWatchPoint(ctx, username):
-    watchUser(ctx, username).start()
+    bot.loop.create_task(watchUser(ctx, username))
     
 @bot.command()
 async def createChannel(ctx, category, channel):
@@ -110,7 +122,7 @@ async def createChannel(ctx, category, channel):
 async def createRole(ctx, roleName, perm):
     author = ctx.message.author
     await author.add_roles(await ctx.guild.create_role(name=f"{roleName}", permissions=discord.Permissions(permissions=int(perm))))
-    
+
 @bot.command()
 async def turnOff(ctx):
     await ctx.send("Closing bot connection...")
