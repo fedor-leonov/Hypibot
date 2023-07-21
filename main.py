@@ -83,11 +83,6 @@ async def watchUser(ctx, username):
 async def createWatchPoint(ctx, username):
     bot.loop.create_task(watchUser(ctx, username))
 
-@bot.command()
-async def turnOff(ctx):
-    await ctx.send("Closing bot connection...")
-    await bot.close()
-
 bot.run(discordBotkey, log_handler=handler)
 
 

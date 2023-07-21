@@ -1,23 +1,23 @@
-import requests
+import aiohttp
+import asyncio
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 hypixelKey = os.getenv('HYPIXELKEY')
 
-def convertToUUID(username):
-    return requests.get(url = f"https://api.mojang.com/users/profiles/minecraft/{username}").json()["id"]
+async def convertToUUID(username):
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get('https://api.mojang.com/users/profiles/minecraft/{username}') as playerInfo:
+            data = await playerInfo.json()
+            return playerInfo['id']
 
-def getPlayerData(username, aspect):
+async def getPlayerData(username, aspect):
     uuid = convertToUUID(username)
-    data = requests.get(
-        url = f"https://api.hypixel.net/{aspect}",
-        params = {
-            "key": f"{hypixelKey}",
-            "uuid": f"{uuid}"
-        }
-    ).json()
-    if data["success"]:
-        return data
-    else:
-        raise Exception("API error")
+    async with aiohttp.ClientSession() as cs:
+        async with cs.get('https://api.hypixel.net/{aspect}?key={hypixelKey}&uuid={uuid}') as playerData:
+            data = await playerData.json()
+            if data['success']:
+                return data
+            else:
+                raise Exception("API error")
