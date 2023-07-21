@@ -8,14 +8,16 @@ hypixelKey = os.getenv('HYPIXELKEY')
 
 async def convertToUUID(username):
     async with aiohttp.ClientSession() as cs:
-        async with cs.get('https://api.mojang.com/users/profiles/minecraft/{username}') as playerInfo:
+        async with cs.get(f'https://api.mojang.com/users/profiles/minecraft/{username}') as playerInfo:
             data = await playerInfo.json()
-            return playerInfo['id']
+            return data['id']
+            
 
 async def getPlayerData(username, aspect):
-    uuid = convertToUUID(username)
+    uuid = await convertToUUID(username)
+    params = {'key': hypixelKey, 'uuid': uuid}
     async with aiohttp.ClientSession() as cs:
-        async with cs.get('https://api.hypixel.net/{aspect}?key={hypixelKey}&uuid={uuid}') as playerData:
+        async with cs.get(f'https://api.hypixel.net/{aspect}', params=params) as playerData:
             data = await playerData.json()
             if data['success']:
                 return data
