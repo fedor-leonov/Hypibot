@@ -1,3 +1,4 @@
+from apihandler import *
 import discord
 from discord.ext import commands
 from discord.ext import tasks
@@ -6,28 +7,22 @@ from datetime import datetime
 import requests
 import asyncio
 import logging
+import math
 import os
-import tracemalloc
-
-tracemalloc.start()
 
 
-
+load_dotenv()
 commandPrefix = '$'
-load_dotenv() # load dotenv
 discordBotkey = os.getenv('BOTKEY')
-hypixelKey = os.getenv('HYPIXELKEY')
-botDescription = 'Bot for interacting with Hypixel API'
+botDescription = 'Hypixel utility bot'
 error = "Oops! Error occured!"
 logFile = 'bot.log'
 
-#set up discord intents
 intents = discord.Intents.default()
 intents.members = True
 intents.message_content = True
 intents.moderation = True
 
-#enable log
 handler = logging.FileHandler(filename=logFile, encoding='utf-8', mode='w')
 client = discord.Client(intents=intents)
 bot = commands.Bot(command_prefix=f'{commandPrefix}', description=f'{botDescription}', intents=intents)
@@ -39,89 +34,54 @@ async def on_ready():
 
 @bot.command()
 async def lastOnline(ctx, username):
-    playerData = requests.get(
-        url = "https://api.hypixel.net/player",
-        params = {
-            "key": f"{hypixelKey}",
-            "name": f"{username}"
-        }
-    ).json()
-    if playerData["success"]:
-        if(playerData == "null"):
-            await ctx.send(error)
-        else:
-            try:
-                lastLogout = playerData["player"]["lastLogout"]
-                await ctx.send(f"{username} was last online at {datetime.fromtimestamp(lastLogout/1000)}")
-            except KeyError:
-                await ctx.send(f"Hypixel API does not have online info about {username}")
+    try:
+        await ctx.send(await getPlayerStatus(username))
+    except KeyError:
+        await ctx.send(f"Hypixel API does not have login info about {username}")
+    except:
+        await ctx.send(error)
+
+async def getPlayerStatus(username):
+    if getPlayerData(username, "status")["session"]["online"]:
+        lastLogout = getPlayerData(username, "player")["player"]["lastLogout"]
+        result = f"{username} is online."
     else:
-        await ctx.send(error + "Have you searched this name recently?")
+        lastLogout = getPlayerData(username, "player")["player"]["lastLogout"]
+        result = f"{username} was last online at {datetime.fromtimestamp(math.floor(lastLogout/1000))}"
+    return result
 
 
 @bot.command()
 async def isOnline(ctx, username):
-    playerID = requests.get(
-        url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
-    ).json()["id"]
-    playerData = requests.get(
-        url = "https://api.hypixel.net/status",
-        params = {
-            "key": f"{hypixelKey}",
-            "uuid": f"{playerID}"
-        }
-    ).json()
-    if playerData["success"]:
-        if playerData["session"]["online"]:
-            await ctx.send(f"{username} is currently online!")
+    try:
+        if getPlayerData(username, "status")["session"]["online"]:
+            await ctx.send(f"{username} is online.")
         else:
-            await ctx.send(f"{username} is currently not online!")         
-    else:
-        await ctx.send(error + " Have you searched this name recently?")
+            await ctx.send(f"{username} is offline.")     
+    except:
+        await ctx.send(error)    
 
 async def watchUser(ctx, username):
     switch_state = None
     await bot.wait_until_ready()
     while not bot.is_closed():
-        playerID = requests.get(
-            url = f"https://api.mojang.com/users/profiles/minecraft/{username}"
-        ).json()["id"]
-        playerData = requests.get(
-            url = "https://api.hypixel.net/status",
-            params = {
-                "key": f"{hypixelKey}",
-                "uuid": f"{playerID}"
-            }
-        ).json()
-        if playerData["success"]:
-            if playerData["session"]["online"]:
-                if switch_state != 1:
-                    await ctx.send(f"{username} is currently online!")
-                    switch_state = 1
-            elif playerData["session"]["online"] == False:
-                if switch_state != 0:
-                    await ctx.send(f"{username} is currently not online!")
-                    switch_state = 0
-            else:
-                await ctx.send(error)
-    
-        await asyncio.sleep(10)
+        data = getPlayerData(username, "status")
+        if data["session"]["online"]:
+            if switch_state != 1:
+                embed=discord.Embed(title=f"Online status of {username}", description="Online", color=0x00ff00)
+                await ctx.send(embed=embed)
+                switch_state = 1
+        else:
+            if switch_state != 0:
+                embed=discord.Embed(title=f"Online status of {username}", description="Offline", color=0xff0000)
+                await ctx.send(embed=embed)
+                switch_state = 0
+        await asyncio.sleep(20)
 
 
 @bot.command()
 async def createWatchPoint(ctx, username):
     bot.loop.create_task(watchUser(ctx, username))
-    
-@bot.command()
-async def createChannel(ctx, category, channel):
-    categoryName = category
-    category = discord.utils.get(ctx.guild.categories, name=categoryName)
-    await ctx.guild.create_text_channel(f'{channel}', category=category)
-
-@bot.command()
-async def createRole(ctx, roleName, perm):
-    author = ctx.message.author
-    await author.add_roles(await ctx.guild.create_role(name=f"{roleName}", permissions=discord.Permissions(permissions=int(perm))))
 
 @bot.command()
 async def turnOff(ctx):
