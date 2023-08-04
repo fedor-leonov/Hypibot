@@ -11,7 +11,7 @@ Commands:
     $lastOnline USERNAME: Checks the last logout date of the provided username on Hypixel. May not work with old users on Hypixel.
 
 ## Credits
-Created by Fedor Leonov (talk to me on Discord at davidperkins)
+Created by Fedor Leonov (talk to me on Discord at daveperkins)
 
 ## License
 Read the GPL license at LICENSE.txt
